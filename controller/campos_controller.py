@@ -1,21 +1,37 @@
-from flask import  jsonify
+from flask import  request
+from app import app
+from services.campos_service import create_campo, update_campo, get_campo, get_all_campo, delete_campo
 
 
-def get_all_campo():
-    return jsonify({'id': '',
-                    'status': 'training.status',
-                    'id_dataset': 'training.id_dataset',
-                    }), 200
+# Registrando as CRUD para gerenciamento de campos
+@app.route('/campo', methods=['GET'])
+def get_fields():
+    with app.app_context():  # Cria o contexto da aplicação
+        return get_all_campo()
 
 
-def create_campo(data):
-    return jsonify(data),201
+@app.route('/campo', methods=['POST'])
+def create_fields():
+    with app.app_context():
+        data = request.get_json()
+        return create_campo(data)
 
-def update_campo(data, id):
-    return jsonify({'campo':id}),200
 
-def get_campo(id):
-    return jsonify({'campo':id}),200
+@app.route('/campo/<int:id>', methods=['PUT'])
+def update_fields(id):
+    with app.app_context():
+        data = request.get_json()
+        return update_campo(data, id)
 
-def delete_campo(id):
-    return jsonify({'campo':id}),200
+
+@app.route('/campo/<int:id>', methods=['DELETE'])
+def delete_field(id):
+    with app.app_context():
+        return delete_campo(id)
+
+
+@app.route('/campo/<int:id>', methods=['GET'])
+def get_field(id):
+    with app.app_context():
+        return get_campo(id)
+
