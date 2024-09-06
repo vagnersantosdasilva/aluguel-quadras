@@ -1,4 +1,5 @@
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
 
@@ -46,27 +47,40 @@ class ExcecaoHorario(db.Model):
     horario_fechamento = db.Column(db.Time, nullable=False)
     descricao = db.Column(db.String(255))  # Descrição da exceção, ex: 'Feriado de Ano Novo'
 
-
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False, unique=True)  # Email deve ser único
     tipo = db.Column(db.String(50), nullable=False)
     login = db.Column(db.String(100), nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=False)  # Mantém o nome 'password'
     apelido = db.Column(db.String(20), nullable=False)
 
     def __repr__(self):
-        return f'<Campo {self.nome}>'
+        return f'<Usuario {self.nome}>'
 
     def to_dict(self):
         return {
             'id': self.id,
             'nome': self.nome,
             'email': self.email,
-            'apelido':self.apelido,
-            'tipo':self.tipo
+            'apelido': self.apelido,
+            'tipo': self.tipo
         }
+
+    # Propriedade para manipular a senha
+    @property
+    def password_plain(self):
+        raise AttributeError('A senha não pode ser lida diretamente.')
+
+    @password_plain.setter
+    def password_plain(self, password):
+        # Gera o hash da senha ao definir
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        # Verifica se a senha fornecida corresponde ao hash armazenado
+        return check_password_hash(self.password, password)
 
 
 class Locacao(db.Model):

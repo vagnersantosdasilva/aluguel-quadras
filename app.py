@@ -7,6 +7,6 @@ db = SQLAlchemy(app)
 
 
 from controller.campos_controller import *
-
+from controller.usuario_controller import *
 if __name__ == '__main__':
     app.run(debug=True)
