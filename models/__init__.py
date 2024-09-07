@@ -38,6 +38,15 @@ class GradeHorario(db.Model):
     horario_fechamento = db.Column(db.Time, nullable=False)
     ativo = db.Column(db.Boolean, default=True, nullable=False)  # Para desativar horários sem apagá-los
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'campo_id': self.campo_id,
+            'dia_semana': self.dia_semana,
+            'horario_abertura': self.horario_abertura.strftime("%H:%M"),
+            'horario_fechamento': self.horario_fechamento.strftime("%H:%M"),
+            'ativo': self.ativo
+        }
 
 class ExcecaoHorario(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
