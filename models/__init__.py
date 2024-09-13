@@ -100,6 +100,36 @@ class Locacao(db.Model):
     data_inicio = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     horario_inicio = db.Column(db.Time, nullable=False)
     horario_fim = db.Column(db.Time, nullable=False)
-
+    status = db.Column(db.String(30), nullable=False, default='PENDENTE')
     usuario = db.relationship('Usuario', backref=db.backref('locacoes', lazy=True))
     campo = db.relationship('Campo', backref=db.backref('locacoes', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'campo_id': self.campo_id,
+            'usuario_id': self.usuario_id,
+            'data_inicio': self.data_inicio.strftime("%Y-%m-%d"),  # Converte para string no formato de data
+            'horario_inicio': self.horario_inicio.strftime("%H:%M"),  # Converte para string no formato de hora
+            'horario_fim': self.horario_fim.strftime("%H:%M"),  # Converte para string no formato de hora
+            'valor_total': str(self.valor_total),  # Converte para string se for Decimal
+            # Adicione outros atributos conforme necessário
+        }
+
+class Pagamento(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    locacao_id = db.Column(db.Integer, db.ForeignKey('locacao.id'), nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='pendente')  # Ex: 'pendente', 'confirmado', 'falhou'
+    meio = db.Column(db.String(50), nullable=True)  # Ex: 'cartão', 'boleto', 'pix'
+    data_pagamento = db.Column(db.DateTime, nullable=True)
+    valor = db.Column(db.Numeric(10, 2), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'locacao_id': self.locacao_id,
+            'status': self.status,
+            'meio': self.meio,
+            'data_pagamento': self.data_pagamento.strftime("%Y-%m-%d %H:%M:%S") if self.data_pagamento else None,
+            'valor': str(self.valor)
+        }

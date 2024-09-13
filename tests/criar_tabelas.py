@@ -14,5 +14,5 @@ def create_tables():
         print("Tabelas criadas com sucesso!")
 
 if __name__ == "__main__":
-    #recreate_tables()
-    create_tables()
+    recreate_tables()
+    #create_tables()
