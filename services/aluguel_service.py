@@ -39,16 +39,16 @@ def alugar_campo(data):
         db.session.add(new_locacao)
         db.session.commit()
 
-        # Aciona o serviço de pagamento
-        resultado_pagamento = acionar_interface_pagamento(new_locacao)
-
-        # Atualiza o status da locação com base no resultado do pagamento
-        if resultado_pagamento['status'] == "APROVADO":
-            new_locacao.status = "EM_ANDAMENTO"
-        elif resultado_pagamento['status'] == "REJEITADO":
-            new_locacao.status = "CANCELADO"
-        elif resultado_pagamento['status'] == "PENDENTE":
-            new_locacao.status = "PENDENTE_PAGAMENTO"
+        # # Aciona o serviço de pagamento
+        # resultado_pagamento = acionar_interface_pagamento(new_locacao)
+        #
+        # # Atualiza o status da locação com base no resultado do pagamento
+        # if resultado_pagamento['status'] == "APROVADO":
+        #     new_locacao.status = "EM_ANDAMENTO"
+        # elif resultado_pagamento['status'] == "REJEITADO":
+        #     new_locacao.status = "CANCELADO"
+        # elif resultado_pagamento['status'] == "PENDENTE":
+        #     new_locacao.status = "PENDENTE_PAGAMENTO"
 
         # Salva a atualização de status da locação no banco de dados
         db.session.commit()

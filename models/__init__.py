@@ -113,6 +113,7 @@ class Locacao(db.Model):
             'horario_inicio': self.horario_inicio.strftime("%H:%M"),  # Converte para string no formato de hora
             'horario_fim': self.horario_fim.strftime("%H:%M"),  # Converte para string no formato de hora
             'valor_total': str(self.valor_total),  # Converte para string se for Decimal
+            'status': str(self.status)  # Converte para string se for Decimal
             # Adicione outros atributos conforme necessário
         }
 

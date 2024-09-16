@@ -1,2 +1,6 @@
 .idea/
 .venv/
+.env
+# Ignorar arquivos de cache Python
+__pycache__/
+*.py[cod]
