@@ -40,7 +40,7 @@ cd aluguel-quadras  # Acesse o diretório do projeto
 ### **3. Instalar as Dependências**
 
 ```bash
-pip install -r requirements.txt  # Instala as dependências listadas
+pip install -r dependencias.txt  # Instala as dependências listadas
 ```
 
 ### **4. Configurar o Ambiente**
