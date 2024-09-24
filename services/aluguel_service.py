@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from models import Campo, GradeHorario, Usuario, Locacao, ExcecaoHorario
+from models import Campo, GradeHorario, Usuario, Locacao, ExcecaoHorario, ListaEspera
 from app import db
 from flask import jsonify, request
 from datetime import datetime, time
@@ -18,6 +18,7 @@ from services.pamagamento_service import acionar_interface_pagamento
 # acionar meio de pagamento
 # notificar email do usuario de status de pagamento e do aluguel
 # atualizar grade de horario de campo para ativo ou ocupado
+
 
 
 # Handler para tratar erros e respostas
@@ -56,6 +57,49 @@ def alugar_campo(data):
         return jsonify(new_locacao.to_dict()), 201
 
     except Exception as e:
+        db.session.rollback()
+        return handle_error(str(e), 500)
+
+
+def cancelar_aluguel_campo(data):
+    # TODO: Atrelar os pedidos de locacao ao id de usuario que faz a solicitação para evitar que usuarios possam alterar locacoes que não são suas
+
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+
+    # Extrair o ID da locação a ser cancelada
+    id = data.get('id')
+
+    # Verificar se o ID foi fornecido
+    if not id:
+        return handle_error("O ID da locação é obrigatório.", 400)
+
+    try:
+        # Buscar a locação pelo ID
+        locacao = Locacao.query.filter_by(id=id).first()
+
+        # Verificar se a locação foi encontrada
+        if not locacao:
+            return handle_error(f"Locação com ID {id} não encontrada.", 404)
+
+        # Verificar se a locação já está cancelada
+        if locacao.status == 'CANCELADO':
+            return handle_error("Essa locação já foi cancelada.", 400)
+
+        # Verificar se a locação está em um estado que permita cancelamento (por exemplo, 'EM_ANDAMENTO')
+        if locacao.status not in ['PENDENTE', 'EM_ANDAMENTO']:
+            return handle_error("A locação não pode ser cancelada no status atual.", 400)
+
+        # Atualizar o status da locação para 'CANCELADO'
+        locacao.status = 'CANCELADO'
+
+        # Salvar as mudanças no banco de dados
+        db.session.commit()
+
+        # Retornar uma resposta de sucesso
+        return jsonify({"message": "Locação cancelada com sucesso.", "locacao": locacao.to_dict()}), 200
+
+    except Exception as e:
+        # Em caso de erro, fazer rollback da transação e retornar erro
         db.session.rollback()
         return handle_error(str(e), 500)
 
@@ -102,7 +146,8 @@ def validar_locacao(data):
         Locacao.campo_id == campo_id,
         Locacao.data_inicio == data_inicio,
         Locacao.horario_inicio < horario_fim,
-        Locacao.horario_fim > horario_inicio
+        Locacao.horario_fim > horario_inicio,
+        Locacao.status != 'CANCELADO'
     ).first()
 
     if conflito_locacao:
@@ -146,3 +191,68 @@ def calcular_valor_locacao(data):
         return valor_total
     except Exception as e:
         raise ValueError(f"Ocorreu um erro em calcular o valor :"+str(e))
+
+
+def adicionar_usuario_lista_espera(data):
+    try:
+        # Extrai os dados do JSON de entrada
+        usuario_id = data.get('usuario_id')
+        campo_id = data.get('campo_id')
+        data_locacao = data.get('data_locacao')  # Data de início em string
+        horario_inicio = data.get('horario_inicio')  # Horário de início em string
+        horario_fim = data.get('horario_fim')  # Horário de fim em string
+
+        if not usuario_id or not campo_id or not data_locacao or not horario_inicio or not horario_fim:
+            raise ValueError("Usuário, campo, data de início, horário de início e horário de fim são obrigatórios.")
+
+        # Converte as strings de data e hora em objetos datetime e time
+        data_locacao = datetime.strptime(data_locacao, "%Y-%m-%d").date()
+        horario_inicio = datetime.strptime(horario_inicio, "%H:%M").time()
+        horario_fim = datetime.strptime(horario_fim, "%H:%M").time()
+
+        # Verifica se o campo existe
+        campo = Campo.query.get(campo_id)
+        if not campo:
+            raise ValueError(f"O campo com ID {campo_id} não foi encontrado.")
+
+        # Verifica por conflitos com outras locações no mesmo campo e data
+        conflito_locacao = Locacao.query.filter(
+            Locacao.campo_id == campo_id,
+            Locacao.data_inicio == data_locacao,
+            Locacao.horario_inicio < horario_fim,
+            Locacao.horario_fim > horario_inicio
+        ).first()
+
+        # Se não há conflitos, o campo está disponível
+        if not conflito_locacao:
+            return handle_error("O campo está disponível, não há necessidade de adicionar à lista de espera.", 400)
+
+        # Verifica exceções de horários (como feriados ou eventos especiais)
+        excecao_horario = ExcecaoHorario.query.filter(
+            ExcecaoHorario.campo_id == campo_id,
+            ExcecaoHorario.data == data_locacao,
+            ExcecaoHorario.horario_abertura < horario_fim,
+            ExcecaoHorario.horario_fechamento > horario_inicio
+        ).first()
+
+        if excecao_horario:
+            return handle_error(f"O campo está indisponível devido a uma exceção: {excecao_horario.descricao}", 400)
+
+        # Se houve conflitos, adicionar o usuário à lista de espera
+        fila_espera = ListaEspera(
+            usuario_id=usuario_id,
+            campo_id=campo_id,
+            data_locacao=data_locacao,
+            horario_inicio=horario_inicio,
+            horario_fim=horario_fim
+        )
+
+        # Salva no banco de dados
+        db.session.add(fila_espera)
+        db.session.commit()
+
+        return jsonify({"message": "Usuário adicionado à lista de espera com sucesso."}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(str(e), 500)

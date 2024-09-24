@@ -3,32 +3,57 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
 
+
 class Campo(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
-    localizacao = db.Column(db.String(255), nullable=False)
     tipo = db.Column(db.String(50), nullable=False)
     dimensoes = db.Column(db.String(50), nullable=False)
     iluminacao = db.Column(db.Boolean, nullable=False)
     preco = db.Column(db.Numeric(10, 2), nullable=False)
 
-    # Relacionamentos
+    # Relacionamento com Endereco
+    endereco_id = db.Column(db.Integer, db.ForeignKey('endereco.id'), nullable=False)
+    endereco = db.relationship('Endereco', backref=db.backref('campos', lazy=True))
+
+    # Relacionamentos existentes
     horarios = db.relationship('GradeHorario', backref='campo', lazy=True)
     excecoes = db.relationship('ExcecaoHorario', backref='campo', lazy=True)
-
-    def __repr__(self):
-        return f'<Campo {self.nome}>'
 
     def to_dict(self):
         return {
             'id': self.id,
             'nome': self.nome,
-            'localizacao': self.localizacao,
+            'endereco': self.endereco.to_dict(),
             'tipo': self.tipo,
             'dimensoes': self.dimensoes,
             'iluminacao': self.iluminacao,
-            'preco': float(self.preco)  # Convertendo Decimal para float para serialização JSON
+            'preco': float(self.preco)
         }
+
+
+class Endereco(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    rua = db.Column(db.String(150), nullable=False)
+    numero = db.Column(db.String(10), nullable=False)
+    bairro = db.Column(db.String(100), nullable=False)
+    cidade = db.Column(db.String(100), nullable=False)
+    estado = db.Column(db.String(50), nullable=False)
+    cep = db.Column(db.String(10), nullable=True)
+    complemento = db.Column(db.String(50),nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rua': self.rua,
+            'numero': self.numero,
+            'bairro': self.bairro,
+            'cidade': self.cidade,
+            'estado': self.estado,
+            'cep': self.cep,
+            'complemento':self.complemento
+        }
+
 
 class GradeHorario(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -48,6 +73,7 @@ class GradeHorario(db.Model):
             'ativo': self.ativo
         }
 
+
 class ExcecaoHorario(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     campo_id = db.Column(db.Integer, db.ForeignKey('campo.id'), nullable=False)
@@ -55,6 +81,7 @@ class ExcecaoHorario(db.Model):
     horario_abertura = db.Column(db.Time, nullable=False)
     horario_fechamento = db.Column(db.Time, nullable=False)
     descricao = db.Column(db.String(255))  # Descrição da exceção, ex: 'Feriado de Ano Novo'
+
 
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -115,6 +142,29 @@ class Locacao(db.Model):
             'valor_total': str(self.valor_total),  # Converte para string se for Decimal
             'status': str(self.status)  # Converte para string se for Decimal
             # Adicione outros atributos conforme necessário
+        }
+
+
+class ListaEspera(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    campo_id = db.Column(db.Integer, db.ForeignKey('campo.id'), nullable=False)
+    data_locacao = db.Column(db.Date, nullable=False)  # Data da locação desejada
+    horario_inicio = db.Column(db.Time, nullable=False)  # Horário de início desejado
+    horario_fim = db.Column(db.Time, nullable=False)  # Horário de término desejado
+    notificacao_enviada = db.Column(db.Boolean, default=False, nullable=False)  # Indica se o usuário já foi notificado
+    usuario = db.relationship('Usuario', backref=db.backref('lista_espera', lazy=True))
+    campo = db.relationship('Campo', backref=db.backref('lista_espera', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'usuario_id': self.usuario_id,
+            'campo_id': self.campo_id,
+            'data_locacao': self.data_locacao.strftime("%Y-%m-%d"),
+            'horario_inicio': self.horario_inicio.strftime("%H:%M"),
+            'horario_fim': self.horario_fim.strftime("%H:%M"),
+            'notificacao_enviada': self.notificacao_enviada
         }
 
 class Pagamento(db.Model):
