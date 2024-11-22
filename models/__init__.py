@@ -1,86 +1,112 @@
+import base64
 from datetime import datetime
+
+from sqlalchemy import BLOB
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
 
 
 class Campo(db.Model):
+    __tablename__ = 'campo'
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nome = db.Column(db.String(100), nullable=False)
     tipo = db.Column(db.String(50), nullable=False)
     dimensoes = db.Column(db.String(50), nullable=False)
     iluminacao = db.Column(db.Boolean, nullable=False)
     preco = db.Column(db.Numeric(10, 2), nullable=False)
+    descricao = db.Column(db.String(255), nullable=True)
 
-    # Relacionamento com Endereco
-    endereco_id = db.Column(db.Integer, db.ForeignKey('endereco.id'), nullable=False)
-    endereco = db.relationship('Endereco', backref=db.backref('campos', lazy=True))
-
-    # Relacionamentos existentes
-    horarios = db.relationship('GradeHorario', backref='campo', lazy=True)
-    excecoes = db.relationship('ExcecaoHorario', backref='campo', lazy=True)
+    # Relacionamentos
+    endereco = db.relationship('Endereco', uselist=False, back_populates='campo')
+    imagens = db.relationship('Imagem', back_populates='campo', lazy=True)
+    horarios = db.relationship('GradeHorario', back_populates='campo', lazy=True)
+    excecoes = db.relationship('ExcecaoHorario', back_populates='campo', lazy=True)
 
     def to_dict(self):
         return {
             'id': self.id,
             'nome': self.nome,
-            'endereco': self.endereco.to_dict(),
             'tipo': self.tipo,
             'dimensoes': self.dimensoes,
             'iluminacao': self.iluminacao,
-            'preco': float(self.preco)
+            'preco': self.preco,
+            'descricao': self.descricao,
         }
 
 
 class Endereco(db.Model):
+    __tablename__ = 'endereco'
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    campo_id = db.Column(db.Integer, db.ForeignKey('campo.id'), nullable=False)
     rua = db.Column(db.String(150), nullable=False)
     numero = db.Column(db.String(10), nullable=False)
     bairro = db.Column(db.String(100), nullable=False)
     cidade = db.Column(db.String(100), nullable=False)
     estado = db.Column(db.String(50), nullable=False)
     cep = db.Column(db.String(10), nullable=True)
-    complemento = db.Column(db.String(50),nullable=True)
+    complemento = db.Column(db.String(50), nullable=True)
 
+    campo = db.relationship('Campo', back_populates='endereco')
     def to_dict(self):
         return {
             'id': self.id,
-            'rua': self.rua,
-            'numero': self.numero,
-            'bairro': self.bairro,
-            'cidade': self.cidade,
-            'estado': self.estado,
-            'cep': self.cep,
+            'campo_id':self.campo_id,
+            'rua':self.rua,
+            'numero':self.numero,
+            'bairro':self.bairro,
+            'cidade':self.cidade,
+            'estado':self.estado,
+            'cep':self.cep,
             'complemento':self.complemento
         }
 
 
-class GradeHorario(db.Model):
+
+class Imagem(db.Model):
+    __tablename__ = 'imagem'
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     campo_id = db.Column(db.Integer, db.ForeignKey('campo.id'), nullable=False)
-    dia_semana = db.Column(db.String(10), nullable=False)  # Ex: 'Segunda', 'Terça', etc.
-    horario_abertura = db.Column(db.Time, nullable=False)
-    horario_fechamento = db.Column(db.Time, nullable=False)
-    ativo = db.Column(db.Boolean, default=True, nullable=False)  # Para desativar horários sem apagá-los
+    tipo = db.Column(db.String(50), nullable=False)  # Ex: 'principal', 'secundaria'
+    dados = db.Column(db.LargeBinary, nullable=False)
 
+    campo = db.relationship('Campo', back_populates='imagens')
     def to_dict(self):
         return {
             'id': self.id,
             'campo_id': self.campo_id,
-            'dia_semana': self.dia_semana,
-            'horario_abertura': self.horario_abertura.strftime("%H:%M"),
-            'horario_fechamento': self.horario_fechamento.strftime("%H:%M"),
-            'ativo': self.ativo
+            'tipo' : self.tipo,
+            'dados': base64.b64encode(self.dados).decode('utf-8')
         }
 
 
+
+class GradeHorario(db.Model):
+    __tablename__ = 'grade_horario'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    campo_id = db.Column(db.Integer, db.ForeignKey('campo.id'), nullable=False)
+    dia_semana = db.Column(db.String(10), nullable=False)  # Ex: 'Segunda', 'Terça'
+    horario_abertura = db.Column(db.Time, nullable=False)
+    horario_fechamento = db.Column(db.Time, nullable=False)
+
+    campo = db.relationship('Campo', back_populates='horarios')
+
+
 class ExcecaoHorario(db.Model):
+    __tablename__ = 'excecao_horario'
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     campo_id = db.Column(db.Integer, db.ForeignKey('campo.id'), nullable=False)
     data = db.Column(db.Date, nullable=False)  # Data específica da exceção
     horario_abertura = db.Column(db.Time, nullable=False)
     horario_fechamento = db.Column(db.Time, nullable=False)
-    descricao = db.Column(db.String(255))  # Descrição da exceção, ex: 'Feriado de Ano Novo'
+    descricao = db.Column(db.String(255), nullable=True)
+
+    campo = db.relationship('Campo', back_populates='excecoes')
 
 
 class Usuario(db.Model):
@@ -166,6 +192,7 @@ class ListaEspera(db.Model):
             'horario_fim': self.horario_fim.strftime("%H:%M"),
             'notificacao_enviada': self.notificacao_enviada
         }
+
 
 class Pagamento(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

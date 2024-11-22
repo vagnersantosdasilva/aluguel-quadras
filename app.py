@@ -7,7 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import atexit
 import os
-
+from flask_cors import CORS  # Importando Flask-CORS
 
 
 load_dotenv()
@@ -15,6 +15,8 @@ load_dotenv()
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 db = SQLAlchemy(app)
+
+CORS(app, resources={r"/*": {"origins": "http://localhost:4200"}})
 
 # Inicialize o Flask-Mail
 mail = Mail(app)
@@ -29,6 +31,8 @@ from controller.grade_horario_controller import *
 from controller.locacao_controller import *
 from controller.email_controller import  *
 from controller.pagamentos_controller import *
+from controller.imagem_controller import *
+from controller.endereco_controller import *
 from services.monitor_locacao_service import verificar_fila_de_espera, verificar_status_pagamento
 
 # Configurando o APScheduler

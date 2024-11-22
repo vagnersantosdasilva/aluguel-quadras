@@ -1,6 +1,10 @@
 from models import Campo, Endereco
 from app import db
 from flask import jsonify, request
+from models import Campo
+from app import db
+from flask import jsonify
+
 
 # Handler para tratar erros e respostas
 def handle_error(error_message, status_code=400):
@@ -8,10 +12,10 @@ def handle_error(error_message, status_code=400):
     response.status_code = status_code
     return response
 
+
 def get_all_campo_filter(request):
     try:
         # Pega os parâmetros de consulta da requisição
-        localizacao = request.args.get('localizacao')
         tipo = request.args.get('tipo')
         dimensoes = request.args.get('dimensoes')
         iluminacao = request.args.get('iluminacao')  # Pode ser 'True' ou 'False'
@@ -22,8 +26,6 @@ def get_all_campo_filter(request):
         query = Campo.query
 
         # Aplica os filtros conforme os parâmetros recebidos
-        if localizacao:
-            query = query.filter(Campo.localizacao.ilike(f"%{localizacao}%"))
         if tipo:
             query = query.filter(Campo.tipo.ilike(f"%{tipo}%"))
         if dimensoes:
@@ -43,6 +45,7 @@ def get_all_campo_filter(request):
     except Exception as e:
         return handle_error(str(e), 500)
 
+
 def get_all_campo():
     try:
         campos = Campo.query.all()  # Recupera todos os objetos Campo
@@ -51,43 +54,28 @@ def get_all_campo():
     except Exception as e:
         return handle_error(str(e), 500)
 
+
 def create_campo(data):
     try:
-        # Extraindo dados do endereço do JSON
-        endereco_data = data.get('endereco', {})
-
-        # Cria o objeto Endereco
-        new_endereco = Endereco(
-            rua=endereco_data.get('rua'),
-            cidade=endereco_data.get('cidade'),
-            estado=endereco_data.get('estado'),
-            cep=endereco_data.get('cep'),
-            numero=endereco_data.get('numero'),
-            complemento=endereco_data.get('complemento'),
-            bairro=endereco_data.get('bairro')
-        )
-
-        # Adiciona o novo endereço à sessão
-        db.session.add(new_endereco)
-        db.session.flush()  # "Flush" aqui para obter o ID do endereço
-
-        # Agora cria o objeto Campo, referenciando o endereço recém-criado
+        # Cria o objeto Campo com as informações recebidas
         new_campo = Campo(
             nome=data.get('nome'),
             tipo=data.get('tipo'),
             dimensoes=data.get('dimensoes'),
-            iluminacao=data.get('iluminacao'),
+            iluminacao=data.get('iluminacao', False),
             preco=data.get('preco'),
-            endereco_id=new_endereco.id  # Usando o ID do endereço recém-criado
+            descricao=data.get('descricao')
         )
 
         # Adiciona o novo campo à sessão
         db.session.add(new_campo)
-        db.session.commit()  # Commita ambos, campo e endereço
+        db.session.commit()  # Commita as alterações no banco de dados
+
         return jsonify(new_campo.to_dict()), 201
     except Exception as e:
-        db.session.rollback()
+        db.session.rollback()  # Reverte a transação em caso de erro
         return handle_error(str(e), 500)
+
 
 def update_campo(data, id):
     try:
@@ -95,14 +83,18 @@ def update_campo(data, id):
         if not campo:
             return handle_error(f"Campo com ID {id} não encontrado", 404)
 
+        # Atualiza os atributos do campo
         for key, value in data.items():
-            setattr(campo, key, value)  # Atualiza os atributos do objeto Campo
-        db.session.commit()  # Commita as alterações no banco de dados
+            if key != 'endereco':  # Ignora a chave 'endereco' aqui, pois não estamos mais lidando com esse relacionamento
+                setattr(campo, key, value)
 
+        db.session.commit()  # Commita as alterações no banco de dados
         return jsonify(campo.to_dict()), 200
+
     except Exception as e:
-        db.session.rollback()
+        db.session.rollback()  # Reverte a transação em caso de erro
         return handle_error(str(e), 500)
+
 
 def get_campo(id):
     try:
@@ -113,6 +105,7 @@ def get_campo(id):
         return jsonify(campo.to_dict()), 200
     except Exception as e:
         return handle_error(str(e), 500)
+
 
 def delete_campo(id):
     try:
@@ -125,5 +118,5 @@ def delete_campo(id):
 
         return jsonify({'message': f"Campo com ID {id} deletado com sucesso"}), 200
     except Exception as e:
-        db.session.rollback()
+        db.session.rollback()  # Reverte a transação em caso de erro
         return handle_error(str(e), 500)
