@@ -113,6 +113,20 @@ def delete_campo(id):
         if not campo:
             return handle_error(f"Campo com ID {id} não encontrado", 404)
 
+            # Verifica e remove o Endereço relacionado
+            # Remove relacionamentos associados
+        if campo.endereco:
+            db.session.delete(campo.endereco)
+
+        for imagem in campo.imagens:
+            db.session.delete(imagem)
+
+        for horario in campo.horarios:
+            db.session.delete(horario)
+
+        for excecao in campo.excecoes:
+            db.session.delete(excecao)
+
         db.session.delete(campo)  # Remove o objeto do banco de dados
         db.session.commit()  # Commita as alterações no banco de dados
 
