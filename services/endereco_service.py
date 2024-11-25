@@ -1,6 +1,7 @@
 from flask import jsonify
 from app import db
-from models import Endereco
+from models import Endereco, Campo
+
 
 # Função para lidar com erros
 def handle_error(error_message, status_code=400):
@@ -29,11 +30,11 @@ def get_endereco(endereco_id):
         return handle_error(str(e), 500)
 
 # Criar um novo endereço
-def create_endereco(data):
+def create_endereco(id_campo,data):
     try:
         # Cria o objeto Endereco com os dados recebidos
         novo_endereco = Endereco(
-            campo_id=data.get('campo_id'),
+            campo_id=id_campo,
             rua=data.get('rua'),
             numero=data.get('numero'),
             bairro=data.get('bairro'),
@@ -53,7 +54,7 @@ def create_endereco(data):
         return handle_error(str(e), 500)
 
 # Atualizar um endereço existente
-def update_endereco(data, endereco_id):
+def update_endereco(data, endereco_id,id_campo):
     try:
         endereco = Endereco.query.get(endereco_id)  # Busca o endereço pelo ID
         if not endereco:
@@ -83,4 +84,22 @@ def delete_endereco(endereco_id):
         return jsonify({'message': f"Endereço com ID {endereco_id} deletado com sucesso"}), 200
     except Exception as e:
         db.session.rollback()  # Reverte a transação em caso de erro
+        return handle_error(str(e), 500)
+
+
+def get_endereco_by_campo(id):
+    try:
+        # Busca o campo pelo ID
+        campo = Campo.query.get(id)
+        if not campo:
+            return handle_error(f"Campo com ID {id} não encontrado", 404)
+
+        # Busca o endereço associado ao campo
+        endereco = campo.endereco
+        if not endereco:
+            return handle_error(f"Endereço associado ao Campo com ID {id} não encontrado", 404)
+
+        # Retorna o endereço em formato JSON
+        return jsonify(endereco.to_dict()), 200
+    except Exception as e:
         return handle_error(str(e), 500)

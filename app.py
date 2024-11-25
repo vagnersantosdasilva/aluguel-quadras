@@ -24,7 +24,7 @@ mail = Mail(app)
 # Configuração do Swagger
 #swagger = Swagger(app)
 
-
+from controller.grade_excecao_controller import *
 from controller.campos_controller import *
 from controller.usuario_controller import *
 from controller.grade_horario_controller import *

@@ -33,6 +33,7 @@ class Campo(db.Model):
             'iluminacao': self.iluminacao,
             'preco': self.preco,
             'descricao': self.descricao,
+            'imagens': [imagem.to_dict() for imagem in self.imagens]
         }
 
 
@@ -79,7 +80,7 @@ class Imagem(db.Model):
             'id': self.id,
             'campo_id': self.campo_id,
             'tipo' : self.tipo,
-            'dados': base64.b64encode(self.dados).decode('utf-8')
+            'dados': self.dados.decode('utf-8')
         }
 
 
@@ -94,7 +95,14 @@ class GradeHorario(db.Model):
     horario_fechamento = db.Column(db.Time, nullable=False)
 
     campo = db.relationship('Campo', back_populates='horarios')
-
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'campo_id': self.campo_id,
+            'dia_semana':self.dia_semana,
+            'horario_abertura': self.horario_abertura.strftime('%H:%M:%S'),
+            'horario_fechamento': self.horario_fechamento.strftime('%H:%M:%S')
+        }
 
 class ExcecaoHorario(db.Model):
     __tablename__ = 'excecao_horario'
@@ -107,6 +115,16 @@ class ExcecaoHorario(db.Model):
     descricao = db.Column(db.String(255), nullable=True)
 
     campo = db.relationship('Campo', back_populates='excecoes')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'campo_id': self.campo_id,
+            'data': self.data.isoformat(),
+            'horario_abertura': self.horario_abertura.strftime('%H:%M:%S'),
+            'horario_fechamento': self.horario_fechamento.strftime('%H:%M:%S'),
+            'descricao': self.descricao,
+        }
 
 
 class Usuario(db.Model):

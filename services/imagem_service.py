@@ -2,6 +2,7 @@ from flask import jsonify
 from models import Imagem
 from app import db
 
+
 # Handler para tratar erros e respostas
 def handle_error(error_message, status_code=400):
     response = jsonify({'error': error_message})
@@ -9,10 +10,14 @@ def handle_error(error_message, status_code=400):
     return response
 
 
-def get_all_imagem():
+def get_all_imagem(campo_id):
     try:
-        imagens = Imagem.query.all()  # Recupera todas as imagens
-        imagens_list = [imagem.to_dict() for imagem in imagens]  # Converte para dicionário
+        # Recupera as imagens associadas ao campo_id fornecido
+        imagens = Imagem.query.filter_by(campo_id=campo_id).all()
+
+        # Converte as imagens para uma lista de dicionários
+        imagens_list = [imagem.to_dict() for imagem in imagens]
+
         return jsonify(imagens_list), 200
     except Exception as e:
         return handle_error(str(e), 500)
@@ -31,6 +36,12 @@ def get_imagem(id):
 
 def create_imagem(data):
     try:
+        # Verifica se já existe uma imagem principal para o campo
+        if data.get('tipo') == 'principal':
+            imagem_principal_existente = Imagem.query.filter_by(campo_id=data.get('campo_id'), tipo='principal').first()
+            if imagem_principal_existente:
+                return jsonify({"erro": "Já existe uma imagem principal para este campo."}), 400
+
         # Cria o objeto Imagem com os dados recebidos
         nova_imagem = Imagem(
             campo_id=data.get('campo_id'),
@@ -48,7 +59,7 @@ def create_imagem(data):
         return handle_error(str(e), 500)
 
 
-def update_imagem(data, id):
+def update_imagem(data, id, id_campo):
     try:
         imagem = Imagem.query.get(id)  # Busca a imagem pelo ID
         if not imagem:
